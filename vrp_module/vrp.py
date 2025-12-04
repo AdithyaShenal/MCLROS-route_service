@@ -12,42 +12,37 @@ class VRP:
         if not self.coords:
             raise ValueError("Coordinates list is empty")
 
-        try:
-            base_url = "http://router.project-osrm.org/table/v1/driving/"
-            loc_str = ";".join([f"{lon},{lat}" for lon, lat in self.coords])
-            url = base_url + loc_str + "?annotations=distance,duration"
+        base_url = "http://router.project-osrm.org/table/v1/driving/"
+        loc_str = ";".join([f"{lon},{lat}" for lon, lat in self.coords])
+        url = base_url + loc_str + "?annotations=distance,duration"
+        r = requests.get(url)
+        # r.raise_for_status() # raise exception if any case
+        data = r.json()
 
-            r = requests.get(url)
-            r.raise_for_status() # raise exception if any case
+        if "distances" in data and "durations" in data:
+            return data["durations"], data["distances"]
+        elif "durations" in data:
+            return data["durations"], None
+        else:
+            raise ValueError("Unexpected OSRM response: " + str(data))
 
-            data = r.json()
-
-            if "distances" in data and "durations" in data:
-                return data["durations"], data["distances"]
-            elif "durations" in data:
-                return data["durations"], None
-            else:
-                raise ValueError("Unexpected OSRM response: " + str(data))
-        except (requests.exceptions.RequestException, ValueError) as e:
-            # Catch any network/OSRM errors and return a clean error
-            return {"error": f"OSRM request failed: {e}"}
     
     # Method - 2
     def _create_data_model(self):
-        try:
-            duration_matrix, distance_matrix = self._get_distance_matrix()
-        except Exception as e:
-            raise RuntimeError(f"Failed to create distance matrix: {e}")
+        # try:
+        duration_matrix, distance_matrix = self._get_distance_matrix()
+        # except Exception as e:
+        #     raise RuntimeError(f"Failed to create distance matrix: {e}")
         
-        matrix = distance_matrix if distance_matrix is not None else duration_matrix
+        # matrix = distance_matrix if distance_matrix is not None else duration_matrix
         
-        if not matrix:
-            raise ValueError("Distance/duration matrix is empty")
-        
-        # fallback to duration matrix if any case
+        # if not matrix:
+        #     raise ValueError("Distance/duration matrix is empty")
 
         data = {}
-        data['distance_matrix'] = [[int(round(d)) for d in row] for row in matrix]
+        data['distance_matrix'] = distance_matrix
+        data['distance_matrix'] = [[int(d) for d in row] for row in data['distance_matrix']]
+        # data['distance_matrix'] = [[int(round(d)) for d in row] for row in matrix]
         data['demands'] = self.demands
         data['vehicle_capacities'] = self.vehicle_capacities
         data['num_vehicles'] = len(self.vehicle_capacities)
