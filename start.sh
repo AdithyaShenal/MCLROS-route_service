@@ -1,1 +1,2 @@
-uvicorn vrp_module.main:app --host 0.0.0.0 --port 10000
+cd vrp_module
+uvicorn main:app --host 0.0.0.0 --port $PORT
